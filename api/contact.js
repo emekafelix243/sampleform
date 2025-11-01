@@ -1,5 +1,5 @@
 // api/contact.js
-const { Pool } = require("pg");
+import { Pool } from "pg";
 
 const db = new Pool({
   connectionString:
@@ -10,7 +10,18 @@ const db = new Pool({
     : false,
 });
 
-module.exports = async function handler(req, res) {
+// Keep the pool across invocations
+let isConnected = false;
+async function connectDb() {
+  if (!isConnected) {
+    await db.connect();
+    isConnected = true;
+  }
+}
+
+export default async function handler(req, res) {
+  await connectDb();
+
   if (req.method === "POST") {
     try {
       const { name, email, location } = req.body;
@@ -47,9 +58,10 @@ module.exports = async function handler(req, res) {
       `;
       res.status(200).send(html);
     } catch (err) {
+      console.error(err);
       res.status(500).send("Error fetching contacts");
     }
   } else {
     res.status(405).send("Method Not Allowed");
   }
-};
+}
